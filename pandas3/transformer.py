@@ -73,19 +73,33 @@ def _parse_input_with_abi(input_data: str, abi: str) -> (str, [Dict[str, type]],
 
 def traces_to_func_call_df(
         df: DataFrame,
-        alias: Optional[Dict[str, str]] = None
+        # column name to alias
+        alias: Optional[Dict[str, str]] = None,
+        # contract address to abi
+        abi_map: Optional[Dict[str, str]] = None
 ) -> DataFrame:
     if alias is not None:
         df = df.rename(alias)
 
-    assert {'block_number', 'tx_index', 'trace_address', 'address', 'input', 'abi'}.issubset(df.columns)
+    assert {'block_number', 'tx_index', 'trace_address', 'address', 'input'}.issubset(df.columns)
 
-    parsed_df: DataFrame = df.apply(lambda x: _parse_input_with_abi(x.input, x.abi), axis=1, result_type='expand')
+    has_abi_column = {'abi'}.issubset(df.columns)
+
+    parsed_df: DataFrame = df.apply(
+        lambda x: _parse_input_with_abi(x.input,
+                                        x.abi if has_abi_column and not pd.isna(x.abi) else abi_map[x.address]),
+        axis=1,
+        result_type='expand'
+    )
     parsed_df = parsed_df.rename(columns={0: 'func_name', 1: 'input_schema', 2: 'input_params'})
 
     df = pd.concat([df, parsed_df], axis=1)
     df['hash_index'] = df.apply(lambda x: _calculate_trace_index(x.block_number, x.tx_index, x.trace_address), axis=1)
-    df.drop(['input', 'abi'], axis=1)
+
+    if has_abi_column:
+        df.drop(['input', 'abi'], axis=1)
+    else:
+        df.drop(['input'], axis=1)
 
     distinct_func_map = df[['address', 'func_name', 'input_params']] \
         .groupby(['address', 'func_name']) \
@@ -109,10 +123,11 @@ def traces_to_func_call_df(
         if result_df is None:
             result_df = funcall_df
         else:
+            # outer join will append the index from result_df to the column of result.
             result_df = result_df.join(other=funcall_df,
                                        on='hash_index',
-                                       how='outer')
+                                       how='outer').set_index('hash_index')
 
     return result_df.join(df[['hash_index', 'block_number', 'tx_index', 'trace_address']].set_index('hash_index'),
                           on='hash_index',
-                          how='inner').set_index('hash_index')
+                          how='inner')

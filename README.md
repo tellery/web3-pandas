@@ -7,8 +7,14 @@ Transform the ethereum.trace dataframe to a function call dataframe.
 ```python
 from pandas3.transformer import traces_to_func_call_df
 
+# There are abis in the df.
 df = pd.read_csv(_get_resource_path('data1.csv'))
 df = traces_to_func_call_df(df=df)
+
+# There aren't abis in the df.
+df = pd.read_csv(_get_resource_path('data2.csv'))
+abi = _read_resource('abi.json')
+df = traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
 ```
 
 Result example:
