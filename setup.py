@@ -11,7 +11,7 @@ long_description = read('README.md') if os.path.isfile("README.md") else ""
 
 setup(
     name='web3-pandas',
-    version='0.1.1',
+    version='0.2.0',
     author='songv',
     author_email='songwei@iftech.io',
     description='Pandas extension utils for Web3',
@@ -33,7 +33,8 @@ setup(
     python_requires='>=3.6,<4',
     install_requires=[
         'pandas==1.4.0',
-        'web3==5.26.0'
+        'web3==5.26.0',
+        'pandarallel==1.5.5'
     ],
     project_urls={
         'Bug Reports': 'https://github.com/tellery/web3-pandas/issues',

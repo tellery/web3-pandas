@@ -152,3 +152,4 @@ fabric.properties
 
 # Custom
 supervisor.conf
+/tmp
