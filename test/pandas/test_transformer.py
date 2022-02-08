@@ -4,7 +4,7 @@ from typing import AnyStr
 import pandas as pd
 
 import test.resources
-from pandas3.transformer import traces_to_func_call_df
+from pandas3.transformer import Transformer
 
 RESOURCE_GROUP = 'test_transformer'
 
@@ -18,9 +18,11 @@ def _read_resource(file_name: str) -> AnyStr:
 
 
 class TestTransformer(unittest.TestCase):
+    transformer = Transformer()
+
     def test_traces_to_func_call_df_with_abi(self):
         df = pd.read_csv(_get_resource_path('data1.csv'))
-        df = traces_to_func_call_df(df=df)
+        df = self.transformer.traces_to_func_call_df(df=df)
 
         self.assertEqual(
             first=df.loc['11565326_60_nan', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
@@ -45,7 +47,7 @@ class TestTransformer(unittest.TestCase):
     def test_traces_to_func_call_df_without_abi(self):
         df = pd.read_csv(_get_resource_path('data2.csv'))
         abi = _read_resource('abi.json')
-        df = traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
+        df = self.transformer.traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
 
         self.assertEqual(
             first=df.loc['11565108_139_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
@@ -60,7 +62,7 @@ class TestTransformer(unittest.TestCase):
     def test_traces_to_func_call_df_with_part_abi(self):
         df = pd.read_csv(_get_resource_path('data3.csv'))
         abi = _read_resource('abi.json')
-        df = traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
+        df = self.transformer.traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
 
         self.assertEqual(
             first=df.loc['11565326_60_nan', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
