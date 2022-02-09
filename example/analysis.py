@@ -32,7 +32,7 @@ def analysis_weth_withdraw_value():
 
     func_call_df = transformer.traces_to_func_call_df(
         df=weth_df,
-        alias={'transaction_index': 'tx_index', 'to_address': 'address'},
+        alias={'transaction_index': 'tx_index', 'to_address': 'contract_address'},
         abi_map={weth_contract_address: weth_abi}
     )
 
