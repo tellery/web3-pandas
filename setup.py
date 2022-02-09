@@ -30,11 +30,12 @@ setup(
         'Programming Language :: Python :: 3.9'
     ],
     keywords='web3, pandas',
-    python_requires='>=3.7,<4',
+    python_requires='>=3.6,<4',
     install_requires=[
         'pandas==1.4.0',
         'web3==5.26.0',
-        'pandarallel==1.5.5'
+        'pandarallel==1.5.5',
+        'cachetools==5.0.0'
     ],
     project_urls={
         'Bug Reports': 'https://github.com/tellery/web3-pandas/issues',
