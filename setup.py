@@ -30,7 +30,7 @@ setup(
         'Programming Language :: Python :: 3.9'
     ],
     keywords='web3, pandas',
-    python_requires='>=3.6,<4',
+    python_requires='>=3.7,<4',
     install_requires=[
         'pandas==1.4.0',
         'web3==5.26.0',
