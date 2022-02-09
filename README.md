@@ -31,20 +31,20 @@ hash_index
 11565275_26_nan                                                                    NaN                                                                   NaN  https://ipfs.fleek.co/ipfs/bafybeickkbbjtoc3qpwpjxyzuiapwky52tfynnvy5c3u6dnr375a4ys3vu  https://ipfs.fleek.co/ipfs/bafybeifpxcq2hhbzuy2ich3duh7cjk4zk4czjl6ufbpmxep247ugwzsny4             b'x\xd9\xce\x97`g\xaa\xa5\xaa\x90$\xc1zrl\x9b\x12\x1d\x14\xab\xb7:\xc7dLb\xc7\nn\x1a\x9a_'  b'\x9e\xf9\xd6\xd1\xdc<\xfb\xd36T\x95\x078l@36C0Puv_d-\xb4\x1f\xb5v\xf8\xf9\x9d'                                                                        0.0                                                                      0.0                                                 100000000000000000000      11565275        26            NaN
 ```
 
-The column name consist of the address of the contract, the function name, and the parameter name. If the parameter is a
-nested type, you will get a name has more parts.
+The columns consist of the address of the contract, the function name, and the parameter name. If the parameter is
+nested, you will get a name of more parts.
 
-The hash index consist of the block number, transaction index and the trace address, they can uniquely identify a trace
+The hash indices consist of the block number, transaction index and the trace address, which uniquely identify a trace
 record.
 
 ## ethereum-etl example
 
-The [ethereum-etl](https://github.com/blockchain-etl/ethereum-etl) is a tool that lets you convert blockchain data into
+The [ethereum-etl](https://github.com/blockchain-etl/ethereum-etl) is a tool to convert blockchain data into
 convenient formats like CSVs and relational databases. We can use it and *web3-pandas* to do some analysis of the
-function of contract.
+on-chain contract interaction.
 
-Now, I will get 2000 blocks before Feb. 7, 2022, and analysis the total of the WETH withdraw changes over time, I will
-get a dataframe, the index is block number and the column is the total of the WETH withdraw.
+Now, we will get 2000 blocks before Feb. 7, 2022, and analyze the total WETH withdraw over time.
+The result would be a dataframe, where the index is block number and the column is the total of the WETH withdraw.
 
 1. Get traces for 2000 blocks before Feb. 7, 2022
 
@@ -64,7 +64,7 @@ And then you will get the dataframe:
 
 ```
              0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2.withdraw.wad
-block_number                                                        
+block_number
 14155621                                         1371007768230527738
 14155623                                       257031256017724005109
 14155624                                        19809274570083293112
