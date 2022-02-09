@@ -225,9 +225,7 @@ class Transformer:
                 [i for i in abi if 'name' in i and i['name'] == func_name and i['type'] == 'function'][0]['inputs']
         except Exception as ex:
             self.logger.warning("parsing input with abi failed: %s", ex)
-            func_name = ''
-            input_schema = []
-            input_params = {}
+            return '', [], {}
 
         return func_name, input_schema, input_params
 
@@ -242,34 +240,38 @@ class Transformer:
                  input_schema: List[Dict[str, Any]],
                  input_params: Dict[str, Any]
         """
-        abi = self._load_abi(contract_address)
-        contract = self._load_contract(contract_address)
+        try:
+            if data is None:
+                raise Exception('The data is empty.')
 
-        event_inputs: Optional[List[Dict[str, Any]]] = None
-        event_name: Optional[str] = None
+            abi = self._load_abi(contract_address)
+            contract = self._load_contract(contract_address)
 
-        if data is None:
+            event_inputs: Optional[List[Dict[str, Any]]] = None
+            event_name: Optional[str] = None
+
+            for event_abi in abi:
+                if 'name' in event_abi and topics[0] == encode_hex(event_abi_to_log_topic(event_abi)):
+                    event_inputs = event_abi['inputs']
+                    event_name = event_abi['name']
+
+            if event_inputs is None or event_name is None:
+                raise Exception('Could not find any event with matching selector.')
+
+            event = contract.events[event_name]().processLog({
+                'data': data,
+                'topics': [decode_hex(topic) for topic in topics],
+                # Placeholder only
+                'logIndex': '',
+                'transactionIndex': '',
+                'transactionHash': '',
+                'address': '',
+                'blockHash': '',
+                'blockNumber': ''
+            })
+        except Exception as ex:
+            self.logger.warning("parsing event data with abi failed: %s", ex)
             return '', [], {}
-
-        for event_abi in abi:
-            if 'name' in event_abi and topics[0] == encode_hex(event_abi_to_log_topic(event_abi)):
-                event_inputs = event_abi['inputs']
-                event_name = event_abi['name']
-
-        if event_inputs is None or event_name is None:
-            return '', [], {}
-
-        event = contract.events[event_name]().processLog({
-            'data': data,
-            'topics': [decode_hex(topic) for topic in topics],
-            # Placeholder only
-            'logIndex': '',
-            'transactionIndex': '',
-            'transactionHash': '',
-            'address': '',
-            'blockHash': '',
-            'blockNumber': ''
-        })
 
         return event.event, event_inputs, event.args
 
