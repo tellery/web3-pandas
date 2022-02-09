@@ -1,27 +1,40 @@
 import json
 import logging
+from datetime import timedelta, datetime
 from multiprocessing import get_context
 from typing import Optional, Tuple, List, Dict, Any
 
+import cachetools
 import pandas as pd
 from eth_utils import event_abi_to_log_topic, encode_hex, decode_hex
 from pandarallel import pandarallel
+from pandas import DataFrame
 from web3 import Web3
 
-from pandas3.logging_util import logging_basic_config
+from . import etherscan
+from .logging_util import logging_basic_config
 
 logging_basic_config()
 
 
 class Transformer:
-    w3 = Web3()
 
-    logger = logging.getLogger(__name__)
+    def __init__(
+            self,
+            init_abi_map: Dict[str, str] = {},
+            nb_workers: int = get_context("fork").cpu_count()
+    ):
+        self.w3 = Web3()
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.contract_cache = cachetools.TTLCache(50, ttl=timedelta(minutes=3), timer=datetime.now)
+        self.abi_cache = cachetools.TTLCache(50, ttl=timedelta(minutes=3), timer=datetime.now)
+        self._update_abi_cache(init_abi_map)
+        self.is_multiprocessing = nb_workers > 1
 
-    abi_cache_map: Dict[str, Any] = {}
-
-    def __init__(self, nb_workers: int = get_context("fork").cpu_count()):
-        pandarallel.initialize(nb_workers=nb_workers)
+        if self.is_multiprocessing:
+            pandarallel.initialize(nb_workers=nb_workers, verbose=1)  # filtered INFO log for pandarallel
+        else:
+            DataFrame.parallel_apply = DataFrame.apply
 
     def traces_to_func_call_df(
             self,
@@ -34,10 +47,7 @@ class Transformer:
         if alias is not None:
             df.rename(alias, axis=1, inplace=True)
 
-        self._batch_load_abi_json(df, abi_map)
-        # Avoid checking if abi is NaN
-        if 'abi' in df.columns:
-            df.abi.fillna('', inplace=True)
+        self._cache_abi_and_contract_by_df(df=df, abi_map=abi_map)
 
         assert ({'block_number', 'tx_index', 'trace_address', 'contract_address', 'input'}.issubset(df.columns))
 
@@ -46,7 +56,6 @@ class Transformer:
             lambda x: self._parse_function_input_with_abi(
                 contract_address=x.contract_address,
                 input_data=x.input,
-                abi_str=x.abi if 'abi' in df.columns and x.abi else abi_map[x.contract_address]
             ),
             axis=1,
             result_type='expand'
@@ -86,10 +95,7 @@ class Transformer:
         if alias is not None:
             df.rename(alias, axis=1, inplace=True)
 
-        self._batch_load_abi_json(df, abi_map)
-        # Avoid checking if abi is NaN
-        if 'abi' in df.columns:
-            df.abi.fillna('', inplace=True)
+        self._cache_abi_and_contract_by_df(df=df, abi_map=abi_map)
 
         assert ({'block_number', 'tx_index', 'contract_address', 'topic1', 'topic2', 'topic3', 'topic4', 'data'} \
                 .issubset(df.columns))
@@ -98,8 +104,7 @@ class Transformer:
             lambda x: self._parse_event_data_with_abi(
                 contract_address=x.contract_address,
                 data=x.data,
-                topics=[i for i in [x.topic1, x.topic2, x.topic3, x.topic4] if not pd.isna(i)],
-                abi_str=x.abi if 'abi' in df.columns and x.abi else abi_map[x.contract_address]
+                topics=[i for i in [x.topic1, x.topic2, x.topic3, x.topic4] if not pd.isna(i)]
             ),
             axis=1,
             result_type='expand'
@@ -154,28 +159,54 @@ class Transformer:
 
         return result_df
 
-    def _batch_load_abi_json(
+    def _cache_abi_and_contract_by_df(
             self,
             df: pd.DataFrame,
             abi_map: Optional[Dict[str, str]] = None
     ):
         if 'abi' in df.columns:
-            abi_address_tuples = df.groupby(['abi', 'contract_address'])['block_number'].count().index.to_list()
-
-            for (abi, address) in abi_address_tuples:
-                if address not in self.abi_cache_map:
-                    self.abi_cache_map[address] = json.loads(abi)
+            abi_map_from_df = df.loc[~pd.isna(df.abi), ['contract_address', 'abi']] \
+                .drop_duplicates(subset=['contract_address']) \
+                .set_index('contract_address') \
+                .squeeze() \
+                .to_dict()
+            self._update_abi_cache(abi_map_from_df)
+            df.drop('abi', axis=1, inplace=True)
 
         if abi_map is not None:
-            for address, abi in abi_map.items():
-                if address not in self.abi_cache_map:
-                    self.abi_cache_map[address] = json.loads(abi)
+            self._update_abi_cache(abi_map)
+
+        if self.is_multiprocessing:
+            # only read cache
+            self._preheat_abi_and_contract(df.contract_address.unique())
+
+    def _update_abi_cache(self, abi_map: Dict[str, Any]):
+        for address, abi in abi_map.items():
+            if address not in self.abi_cache:
+                self.abi_cache[address] = json.loads(abi)
+
+    def _load_abi(self, address: str):
+        if address not in self.abi_cache:
+            self.abi_cache[address] = json.loads(etherscan.get_contract_abi(address))
+        return self.abi_cache[address]
+
+    def _load_contract(self, address: str):
+        if self.is_multiprocessing:
+            return self.w3.eth.contract(abi=self._load_abi(address))
+        if address not in self.contract_cache:
+            self.contract_cache[address] = self.w3.eth.contract(
+                abi=self._load_abi(address)
+            )
+        return self.contract_cache[address]
+
+    def _preheat_abi_and_contract(self, addresses: List[str]):
+        for address in addresses:
+            self._load_contract(address)
 
     def _parse_function_input_with_abi(
             self,
             contract_address: str,
             input_data: str,
-            abi_str: str
     ) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
         """
         :return: function_name: str,
@@ -183,8 +214,9 @@ class Transformer:
                  input_params: Dict[str, Any]
         """
         try:
-            abi = self.abi_cache_map[contract_address]
-            contract = self.w3.eth.contract(abi=abi_str)
+            abi = self._load_abi(contract_address)
+            contract = self._load_contract(contract_address)
+
             func_obj, input_params = contract.decode_function_input(input_data)
 
             func_name = vars(func_obj)['fn_name']
@@ -203,30 +235,29 @@ class Transformer:
             self,
             contract_address: str,
             topics: List[str],
-            abi_str: str,
             data: Optional[str]
     ) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
-        '''        
+        """
         :return: event_name: str,
                  input_schema: List[Dict[str, Any]],
                  input_params: Dict[str, Any]
-        '''
-        abi_list = self.abi_cache_map[contract_address]
+        """
+        abi = self._load_abi(contract_address)
+        contract = self._load_contract(contract_address)
+
         event_inputs: Optional[List[Dict[str, Any]]] = None
         event_name: Optional[str] = None
 
         if data is None:
             return '', [], {}
 
-        for abi in abi_list:
-            if 'name' in abi and topics[0] == encode_hex(event_abi_to_log_topic(abi)):
-                event_inputs = abi['inputs']
-                event_name = abi['name']
+        for event_abi in abi:
+            if 'name' in event_abi and topics[0] == encode_hex(event_abi_to_log_topic(event_abi)):
+                event_inputs = event_abi['inputs']
+                event_name = event_abi['name']
 
         if event_inputs is None or event_name is None:
             return '', [], {}
-
-        contract = self.w3.eth.contract(abi=abi_str)
 
         event = contract.events[event_name]().processLog({
             'data': data,
@@ -248,7 +279,7 @@ class Transformer:
             tx_index: int,
             trace_address: str
     ):
-        return f'{block_number}_{tx_index}_{trace_address}'
+        return f'{int(block_number)}_{int(tx_index)}_{trace_address}'
 
     @staticmethod
     def _tuple_to_dict(
@@ -278,7 +309,7 @@ class Transformer:
             if type(value) is not tuple:
                 result_dict[key] = value
             else:
-                component_schema = [i for i in input_schema \
+                component_schema = [i for i in input_schema
                                     if 'name' in i and 'type' in i and i['name'] == key and i['type'] == 'tuple'][0][
                     'components']
                 result_dict[key] = Transformer._tuple_to_dict(value, component_schema)

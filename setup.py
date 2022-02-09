@@ -34,7 +34,8 @@ setup(
     install_requires=[
         'pandas==1.4.0',
         'web3==5.26.0',
-        'pandarallel==1.5.5'
+        'pandarallel==1.5.5',
+        'cachetools==5.0.0'
     ],
     project_urls={
         'Bug Reports': 'https://github.com/tellery/web3-pandas/issues',
