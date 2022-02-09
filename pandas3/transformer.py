@@ -1,5 +1,6 @@
 import json
 import logging
+from multiprocessing import get_context
 from typing import Optional, Tuple, List, Dict, Any
 
 import pandas as pd
@@ -18,7 +19,8 @@ class Transformer:
 
     abi_cache_map: Dict[str, Any] = {}
 
-    pandarallel.initialize()
+    def __init__(self, nb_workers: int = get_context("fork").cpu_count()):
+        pandarallel.initialize(nb_workers=nb_workers)
 
     def traces_to_func_call_df(
             self,
@@ -36,7 +38,7 @@ class Transformer:
         if 'abi' in df.columns:
             df.abi.fillna('', inplace=True)
 
-        assert({'block_number', 'tx_index', 'trace_address', 'address', 'input'}.issubset(df.columns))
+        assert ({'block_number', 'tx_index', 'trace_address', 'address', 'input'}.issubset(df.columns))
 
         # decode input by abi and get parsed df
         parsed_df: pd.DataFrame = df.parallel_apply(
@@ -77,18 +79,18 @@ class Transformer:
                 append_obj={'hash_index': x.hash_index}
             ), axis=1)
 
-            funcall_df = pd.json_normalize(df.loc[indices, 'input_params'].values.tolist()) \
-                           .set_index('hash_index')
+            funcall_df = pd \
+                .json_normalize(df.loc[indices, 'input_params'].values.tolist()) \
+                .set_index('hash_index')
             funcall_df.columns = f'{address}.{func_name}.' + funcall_df.columns
 
             if result_df is None:
                 result_df = funcall_df
             else:
                 # outer join will append the index from result_df to the column of result.
-                result_df = result_df.join(other=funcall_df,
-                                           on='hash_index',
-                                           how='outer') \
-                                     .set_index('hash_index')
+                result_df = result_df \
+                    .join(other=funcall_df, on='hash_index', how='outer') \
+                    .set_index('hash_index')
 
         return result_df.join(df[['hash_index', 'block_number', 'tx_index', 'trace_address']].set_index('hash_index'),
                               on='hash_index',
@@ -130,7 +132,7 @@ class Transformer:
             func_name = vars(func_obj)['fn_name']
 
             input_schema = \
-                [i for i in abi_obj if 'name' in i and i ['name'] == func_name and i['type'] == 'function'][0]['inputs']
+                [i for i in abi_obj if 'name' in i and i['name'] == func_name and i['type'] == 'function'][0]['inputs']
         except Exception as ex:
             self.logger.warning("parsing input with abi failed: %s", ex)
             func_name = ''
@@ -176,7 +178,8 @@ class Transformer:
                 result_dict[key] = value
             else:
                 component_schema = [i for i in input_schema \
-                    if 'name' in i and 'type' in i and i['name'] == key and i['type'] == 'tuple'][0]['components']
+                                    if 'name' in i and 'type' in i and i['name'] == key and i['type'] == 'tuple'][0][
+                    'components']
                 result_dict[key] = Transformer._tuple_to_dict(value, component_schema)
 
         return result_dict

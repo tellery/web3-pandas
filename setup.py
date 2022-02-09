@@ -11,7 +11,7 @@ long_description = read('README.md') if os.path.isfile("README.md") else ""
 
 setup(
     name='web3-pandas',
-    version='0.2.1',
+    version='0.2.2',
     author='songv',
     author_email='songwei@iftech.io',
     description='Pandas extension utils for Web3',
