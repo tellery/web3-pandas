@@ -6,6 +6,7 @@ import pandas as pd
 import test.resources
 from pandas3.transformer import Transformer
 
+from ipdb import set_trace
 RESOURCE_GROUP = 'test_transformer'
 
 
@@ -25,22 +26,22 @@ class TestTransformer(unittest.TestCase):
         df = self.transformer.traces_to_func_call_df(df=df)
 
         self.assertEqual(
-            first=df.loc['11565326_60_nan', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
+            first=df.loc['11565326_60_', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
             second='0xF8523c551763FE4261A28313015267F163de7541'
         )
 
         self.assertEqual(
-            first=df.loc['11565322_55_nan', '0x8B1C079F8192706532CC0BF0C02DCC4FF40D045D.transferOwnership.newOwner'],
+            first=df.loc['11565322_55_', '0x8B1C079F8192706532CC0BF0C02DCC4FF40D045D.transferOwnership.newOwner'],
             second='0xF8523c551763FE4261A28313015267F163de7541'
         )
 
         self.assertEqual(
-            first=df.loc['11565108_139_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
+            first=df.loc['11565108_139_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifyqibqlheu7ij7fwdex4y2pw2wo7eaw2z6lec5zhbxu3cvxul6h4'
         )
 
         self.assertEqual(
-            first=df.loc['11565303_29_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
+            first=df.loc['11565303_29_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifpxcq2hhbzuy2ich3duh7cjk4zk4czjl6ufbpmxep247ugwzsny4'
         )
 
@@ -50,12 +51,12 @@ class TestTransformer(unittest.TestCase):
         df = self.transformer.traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
 
         self.assertEqual(
-            first=df.loc['11565108_139_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
+            first=df.loc['11565108_139_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifyqibqlheu7ij7fwdex4y2pw2wo7eaw2z6lec5zhbxu3cvxul6h4'
         )
 
         self.assertEqual(
-            first=df.loc['11565303_29_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
+            first=df.loc['11565303_29_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifpxcq2hhbzuy2ich3duh7cjk4zk4czjl6ufbpmxep247ugwzsny4'
         )
 
@@ -65,21 +66,21 @@ class TestTransformer(unittest.TestCase):
         df = self.transformer.traces_to_func_call_df(df=df, abi_map={'0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7': abi})
 
         self.assertEqual(
-            first=df.loc['11565326_60_nan', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
+            first=df.loc['11565326_60_', '0x1D5D9A2DDA0843ED9D8A9BDDC33F1FCA9F9C64A0.transferOwnership.newOwner'],
             second='0xF8523c551763FE4261A28313015267F163de7541'
         )
 
         self.assertEqual(
-            first=df.loc['11565322_55_nan', '0x8B1C079F8192706532CC0BF0C02DCC4FF40D045D.transferOwnership.newOwner'],
+            first=df.loc['11565322_55_', '0x8B1C079F8192706532CC0BF0C02DCC4FF40D045D.transferOwnership.newOwner'],
             second='0xF8523c551763FE4261A28313015267F163de7541'
         )
 
         self.assertEqual(
-            first=df.loc['11565108_139_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
+            first=df.loc['11565108_139_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.tokenURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifyqibqlheu7ij7fwdex4y2pw2wo7eaw2z6lec5zhbxu3cvxul6h4'
         )
 
         self.assertEqual(
-            first=df.loc['11565303_29_nan', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
+            first=df.loc['11565303_29_', '0xABEFBC9FD2F806065B4F3C237D4B59D9A97BCAC7.mint.data.metadataURI'],
             second='https://ipfs.fleek.co/ipfs/bafybeifpxcq2hhbzuy2ich3duh7cjk4zk4czjl6ufbpmxep247ugwzsny4'
         )
