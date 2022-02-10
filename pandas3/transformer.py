@@ -97,7 +97,7 @@ class Transformer:
 
         self._cache_abi_and_contract_by_df(df=df, abi_map=abi_map)
 
-        assert ({'block_number', 'tx_index', 'contract_address', 'topic1', 'topic2', 'topic3', 'topic4', 'data'} \
+        assert ({'block_number', 'tx_index', 'contract_address', 'topic1', 'topic2', 'topic3', 'topic4', 'data'}
                 .issubset(df.columns))
 
         parsed_df: pd.DataFrame = df.parallel_apply(
@@ -185,17 +185,25 @@ class Transformer:
             if address not in self.abi_cache:
                 self.abi_cache[address] = json.loads(abi)
 
-    def _load_abi(self, address: str):
-        if address not in self.abi_cache:
-            self.abi_cache[address] = json.loads(etherscan.get_contract_abi(address))
-        return self.abi_cache[address]
+    def _load_abi(self, address: str) -> Optional[Dict[str, Any]]:
+        try:
+            if address not in self.abi_cache:
+                self.abi_cache[address] = json.loads(etherscan.get_contract_abi(address))
+        except Exception:
+            self.abi_cache[address] = None
+        finally:
+            return self.abi_cache[address]
 
-    def _load_contract(self, address: str):
+    # return type should be Optional[Type[web3.contract.Contract]], but web3.contract was not exposed =/
+    def _load_contract(self, address: str) -> Optional[Any]:
+        abi = self._load_abi(address)
+        if abi is None:
+            return None
         if self.is_multiprocessing:
-            return self.w3.eth.contract(abi=self._load_abi(address))
+            return self.w3.eth.contract(abi=abi)
         if address not in self.contract_cache:
             self.contract_cache[address] = self.w3.eth.contract(
-                abi=self._load_abi(address)
+                abi=abi
             )
         return self.contract_cache[address]
 
@@ -216,6 +224,8 @@ class Transformer:
         try:
             abi = self._load_abi(contract_address)
             contract = self._load_contract(contract_address)
+            if abi is None or contract is None:
+                return '', [], {}
 
             func_obj, input_params = contract.decode_function_input(input_data)
 

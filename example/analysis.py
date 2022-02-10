@@ -4,10 +4,10 @@ import timeit
 
 import pandas as pd
 
-from pandas3 import Transformer
-
 current_file_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(current_file_dir, '..'))
+
+from pandas3 import Transformer
 
 weth_contract_address = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
 
