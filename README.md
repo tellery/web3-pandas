@@ -50,7 +50,7 @@ The result would be a dataframe, where the index is block number and the column 
 
 ```shell
 $ mkdir -p tmp
-$ ethereumetl export_traces -p https://quiet-lingering-voice.quiknode.pro/a5bd71658a5dc6b895d3d04d48bf0e8271d4d9d7/ -o ./tmp/trace.csv -s 14155621 -e 14157621
+$ ethereumetl export_traces -p https://x -o ./tmp/trace.csv -s 14155621 -e 14157621
 
 ......
 2022-02-08 12:07:17,870 - CompositeItemExporter [INFO] - trace items exported: 1417764
